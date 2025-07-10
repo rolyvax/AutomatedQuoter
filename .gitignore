@@ -1,0 +1,5 @@
+*.deb
+.env
+old_main.py
+old_news.py
+old_weather.py
