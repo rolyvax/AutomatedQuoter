@@ -11,13 +11,13 @@ class Songs:
 
         client_id = os.getenv("CLIENT_ID")
         client_secret = os.getenv("CLIENT_SECRET")
-
+        token_path = os.getenv("TOKEN")
         sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id,
                                                        client_secret=client_secret,
                                                        redirect_uri="http://example.com",
                                                        scope="playlist-modify-private",
                                                        show_dialog=True,
-                                                       cache_path="/home/ubuntu/automatedscripts/Quoter/token.txt",
+                                                       cache_path=token_path,
                                                        username="Hakan Akay",))
 
 
