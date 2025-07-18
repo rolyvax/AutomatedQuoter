@@ -25,7 +25,7 @@ usd, eur = news.get_exchange_rates()
 
 async def main():
     translated_quote = quoter_instance.get_translated_quote()
-    the_song = (song.song_name, song.song_link)
+    the_song = (song.song_name, song.song_link, song.song_artist)
     full_translated = f"{translated_quote} - {quoter_instance.author}"
     original_quote = quoter_instance.full_quote
 

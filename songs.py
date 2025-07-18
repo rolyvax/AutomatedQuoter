@@ -30,7 +30,7 @@ class Songs:
         song_list = [song["track"]["id"] for song in playlist_items["items"]]
 
         daily_song = random.choice(song_list)
-
+        self.song_artist = sp.track(daily_song)["artists"][0]["name"]
         self.song_name = sp.track(daily_song)["name"]
         self.song_link = sp.track(daily_song)["external_urls"]["spotify"]
 

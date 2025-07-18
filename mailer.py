@@ -30,7 +30,7 @@ class Mailer:
         subject = f"{self.formatted_date} / Günlük Bilgi ve Durum Raporu."
         body = (f"<u>Güncel Döviz Kurları:</u><br>💵TRY/USD: {usd}<br>💶TRY/EUR: {eur}<br>"
                 f"<br>{weather}"
-                f"🎵Günün şarkısı: {song[0]} - <a href={song[1]}>Spotify'da dinlemek için tıklayınız.🎵</a><br>"
+                f"🎵Günün şarkısı: {song[2]} - {song[0]} - <a href={song[1]}>Spotify'da dinlemek için tıklayınız.🎵</a><br>"
                 f"<br><i>{translated_quote}</i><br>"
                 f"<i>{quote}</i>"
                 f"<br><br>{''.join(events)}"
