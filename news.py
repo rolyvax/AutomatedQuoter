@@ -18,6 +18,12 @@ class News:
         chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--lang=tr-TR")
+        chrome_options.add_argument(
+            "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/115.0.0.0 Safari/537.36"
+        )
 
         self.driver = webdriver.Chrome(options=chrome_options)
 
@@ -25,7 +31,11 @@ class News:
             self.driver.get("https://news.google.com/home?hl=tr&gl=TR&ceid=TR:tr")
             time.sleep(3)
 
-            containers = self.driver.find_elements(By.CLASS_NAME, "KDoq1")[:5]  # 5 bloğu al, istersen değiştir
+            # Debug için sayfa çıktısı yaz
+            with open("debug_google_news.html", "w", encoding="utf-8") as f:
+                f.write(self.driver.page_source)
+
+            containers = self.driver.find_elements(By.CLASS_NAME, "KDoq1")[:5]
 
             for index, container in enumerate(containers, start=1):
                 try:
