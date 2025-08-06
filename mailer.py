@@ -30,11 +30,11 @@ class Mailer:
         subject = f"{self.formatted_date} / Günlük Bilgi ve Durum Raporu."
         body = (f"<u>Güncel Döviz Kurları:</u><br>💵TRY/USD: {usd}<br>💶TRY/EUR: {eur}<br>"
                 f"<br>{weather}"
-                f"🎵Günün şarkısı: {song[2]} - {song[0]} - <a href={song[1]}>Spotify'da dinlemek için tıklayınız.🎵</a><br>"
-                f"<br><i>{translated_quote}</i><br>"
-                f"<i>{quote}</i>"
-                f"<br><br>{''.join(events)}"
-                f"{''.join(haberler)}<br>{'-' * 80}<br><br><br>")
+                f"<u>Günün şarkısı:</u><br>🎵{song[2]} - {song[0]} - <a href={song[1]}>Spotify'da dinlemek için tıklayınız.</a>🎵<br><br>"
+                f"<br><u>Günün sözü:</u><br>[EN] - <i>{translated_quote}</i><br>"
+                f"[TR] - <i>{quote}</i><br>"
+                f"<br><br><u>Tarihte Bugün:</u><br>{''.join(events)}"
+                f"{''.join(haberler)}<br>{'-' * 200}<br><br><br>")
 
         # Set up the MIME for HTML
         sender_name = "Günün Fısıltısı"

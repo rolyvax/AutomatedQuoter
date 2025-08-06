@@ -45,7 +45,7 @@ class TodaysImportant:
             text = event["text"]
             pages = event.get("pages", [])
             link = pages[0]["content_urls"]["desktop"]["page"] if pages else "https://tr.wikipedia.org"
-            formatted.append(f"<br>📅 {year} – {text}<br>")
+            formatted.append(f"📅 {year} – {text}<br>")
 
         return formatted
 
