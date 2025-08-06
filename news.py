@@ -1,91 +1,45 @@
-import time
 import os
-import re
+import time
 import requests
-from datetime import datetime, timedelta
+import feedparser
 from dotenv import load_dotenv
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
 
 
 class News:
-    def __init__(self):
+    def __init__(self, limit=5):
         load_dotenv()
         self.haberler = []
+        self.fetch_news_rss(limit)
 
-        chrome_options = Options()
-        chrome_options.add_argument("--headless=new")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--lang=tr-TR")
-        chrome_options.add_argument(
-            "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/115.0.0.0 Safari/537.36"
-        )
+    def fetch_news_rss(self, limit=5):
+        rss_url = "https://news.google.com/rss?hl=tr&gl=TR&ceid=TR:tr"
+        feed = feedparser.parse(rss_url)
 
-        self.driver = webdriver.Chrome(options=chrome_options)
+        for index, entry in enumerate(feed.entries[:limit], start=1):
+            try:
+                title = entry.title
+                link = entry.link
+                published = entry.published if 'published' in entry else "Tarih alınamadı"
+                source = entry.source.title if 'source' in entry else "Kaynak yok"
 
-        try:
-            self.driver.get("https://news.google.com/home?hl=tr&gl=TR&ceid=TR:tr")
-            time.sleep(3)
-
-            # Debug için sayfa çıktısı yaz
-            with open("debug_google_news.html", "w", encoding="utf-8") as f:
-                f.write(self.driver.page_source)
-
-            containers = self.driver.find_elements(By.CLASS_NAME, "KDoq1")[:5]
-
-            for index, container in enumerate(containers, start=1):
+                # Yayın tarihi formatlama (varsa)
                 try:
-                    article = container.find_element(By.TAG_NAME, "article")
-                    link_candidates = article.find_elements(By.TAG_NAME, "a")
+                    pub_time = time.strptime(published, "%a, %d %b %Y %H:%M:%S %Z")
+                    date_str = time.strftime("%d %B %Y %H:%M", pub_time)
+                except:
+                    date_str = published
 
-                    a_el = None
-                    for a in link_candidates:
-                        if a.get_attribute("aria-label") and a.get_attribute("href"):
-                            a_el = a
-                            break
+                self.haberler.append(
+                    f"<br>{'-'*80}<br>"
+                    f"<b>Başlık:</b> {title}<br>"
+                    f"<b>Kaynak:</b> {source}<br>"
+                    f"<b>Tarih:</b> {date_str}<br>"
+                    f"<b>URL:</b> <a href='{link}'>Haberi okumak için tıklayınız.</a>"
+                )
 
-                    if not a_el:
-                        print(f"[{index}] Uygun haber bağlantısı bulunamadı.")
-                        continue
-
-                    href = a_el.get_attribute("href")
-                    label = a_el.get_attribute("aria-label")
-
-                    title_match = re.search(r"^(.*?) - ", label)
-                    source_match = re.findall(r" - ([^-]+) - ", label)
-
-                    title = title_match.group(1) if title_match else "Başlık bulunamadı"
-                    source = source_match[0] if source_match else "Kaynak bulunamadı"
-
-                    try:
-                        time_el = article.find_element(By.TAG_NAME, "time")
-                        iso_time = time_el.get_attribute("datetime")
-                        dt = datetime.fromisoformat(iso_time.replace("Z", "+00:00"))
-                        dt_local = dt + timedelta(hours=3)
-                        date_str = dt_local.strftime("%d %B %Y %H:%M")
-                    except:
-                        date_str = "Tarih alınamadı"
-
-                    link = "https://news.google.com" + href[1:] if href.startswith("./") else href
-
-                    self.haberler.append(
-                        f"<br>{'-'*80}<br>"
-                        f"<b>Başlık:</b> {title}<br>"
-                        f"<b>Kaynak:</b> {source}<br>"
-                        f"<b>Tarih:</b> {date_str}<br>"
-                        f"<b>URL:</b> <a href='{link}'>Haberi okumak için tıklayınız.</a>"
-                    )
-
-                except Exception as e:
-                    print(f"[{index}] Haber alınamadı: {e}")
-                    continue
-
-        finally:
-            self.driver.quit()
+            except Exception as e:
+                print(f"[{index}] Haber alınamadı: {e}")
+                continue
 
     def build_email_html(self):
         return "".join(self.haberler)
