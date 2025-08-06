@@ -1,70 +1,89 @@
+import time
+import os
+import re
+import requests
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-import time, os, requests
+from selenium.webdriver.chrome.options import Options
+
 
 class News:
     def __init__(self):
         load_dotenv()
+        self.haberler = []
 
-        def make_haber(haber):
-            haber_lines = haber.text.split('\n')
-            haber_source = haber_lines[0]
-            try:
-                haber_text = haber_lines[2]
-            except IndexError:
-                haber_text = haber_lines[1] if len(haber_lines) > 1 else "Başlık bulunamadı"
-            haber_link = haber.find_element(By.CSS_SELECTOR, 'a').get_attribute('href')
-
-            return (f"<br>{'-' * 80}<br><b>Başlık:</b> {haber_text}<br>"
-                    f"<b>Kaynak:</b> {haber_source}<br>"
-                    f"<b>URL:</b> <a href='{haber_link}'>Haberi okumak için tıklayınız.</a>")
-
-        BUNDLE_URL = 'https://www.bundle.app/'
-
-        chrome_options = webdriver.ChromeOptions()
-        chrome_options.add_experimental_option("detach", True)
-        chrome_options.add_argument("--headless")
+        chrome_options = Options()
+        chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
 
-        self.haberler = []
+        self.driver = webdriver.Chrome(options=chrome_options)
 
-        driver = webdriver.Chrome(options=chrome_options)
         try:
-            # Gündem
-            driver.get(BUNDLE_URL + "gundem")
-            time.sleep(2)
-            tum_haberler = driver.find_elements(by=By.CSS_SELECTOR, value='.owl-stage > .owl-item.active > .newsSliderCard')
-            self.haberler.append(f"<br><br><b>Gündem Haberleri:</b>")
-            for haber in tum_haberler:
-                self.haberler.append(make_haber(haber))
+            self.driver.get("https://news.google.com/home?hl=tr&gl=TR&ceid=TR:tr")
+            time.sleep(3)
 
-            # Finans
-            driver.get(BUNDLE_URL + "finans")
-            time.sleep(2)
-            tum_haberler = driver.find_elements(by=By.CSS_SELECTOR, value='.owl-stage > .owl-item.active > .newsSliderCard')
-            self.haberler.append(f"<br>{'-' * 80}<br><br><b>Finans Haberleri:</b>")
-            for haber in tum_haberler:
-                self.haberler.append(make_haber(haber))
+            containers = self.driver.find_elements(By.CLASS_NAME, "KDoq1")[:5]  # 5 bloğu al, istersen değiştir
 
-            # Spor
-            driver.get(BUNDLE_URL + "spor")
-            time.sleep(2)
-            tum_haberler = driver.find_elements(by=By.CSS_SELECTOR, value='.owl-stage > .owl-item.active > .newsSliderCard')
-            self.haberler.append(f"<br>{'-' * 80}<br><br><b>Spor Haberleri:</b>")
-            for haber in tum_haberler:
-                self.haberler.append(make_haber(haber))
+            for index, container in enumerate(containers, start=1):
+                try:
+                    article = container.find_element(By.TAG_NAME, "article")
+                    link_candidates = article.find_elements(By.TAG_NAME, "a")
+
+                    a_el = None
+                    for a in link_candidates:
+                        if a.get_attribute("aria-label") and a.get_attribute("href"):
+                            a_el = a
+                            break
+
+                    if not a_el:
+                        print(f"[{index}] Uygun haber bağlantısı bulunamadı.")
+                        continue
+
+                    href = a_el.get_attribute("href")
+                    label = a_el.get_attribute("aria-label")
+
+                    title_match = re.search(r"^(.*?) - ", label)
+                    source_match = re.findall(r" - ([^-]+) - ", label)
+
+                    title = title_match.group(1) if title_match else "Başlık bulunamadı"
+                    source = source_match[0] if source_match else "Kaynak bulunamadı"
+
+                    try:
+                        time_el = article.find_element(By.TAG_NAME, "time")
+                        iso_time = time_el.get_attribute("datetime")
+                        dt = datetime.fromisoformat(iso_time.replace("Z", "+00:00"))
+                        dt_local = dt + timedelta(hours=3)
+                        date_str = dt_local.strftime("%d %B %Y %H:%M")
+                    except:
+                        date_str = "Tarih alınamadı"
+
+                    link = "https://news.google.com" + href[1:] if href.startswith("./") else href
+
+                    self.haberler.append(
+                        f"<br>{'-'*80}<br>"
+                        f"<b>Başlık:</b> {title}<br>"
+                        f"<b>Kaynak:</b> {source}<br>"
+                        f"<b>Tarih:</b> {date_str}<br>"
+                        f"<b>URL:</b> <a href='{link}'>Haberi okumak için tıklayınız.</a>"
+                    )
+
+                except Exception as e:
+                    print(f"[{index}] Haber alınamadı: {e}")
+                    continue
 
         finally:
-            driver.quit()
+            self.driver.quit()
+
+    def build_email_html(self):
+        return "".join(self.haberler)
 
     def get_exchange_rates(self):
-        load_dotenv()
         API_KEY = os.getenv("EXCHANGE_API")
-
         if not API_KEY:
-            raise Exception("🚨 EXCHANGERATE_APIKEY not found in .env")
+            raise Exception("EXCHANGE_API key not found in .env")
 
         url = f"https://v6.exchangerate-api.com/v6/{API_KEY}/latest/USD"
         response = requests.get(url)
@@ -77,7 +96,4 @@ class News:
         usd_eur = data["conversion_rates"]["EUR"]
         eur_try = usd_try / usd_eur
 
-        usd_try = round(usd_try, 2)
-        eur_try = round(eur_try, 2)
-
-        return usd_try, eur_try
+        return round(usd_try, 2), round(eur_try, 2)
