@@ -22,7 +22,7 @@ class News:
 
     def fetch_all_categories(self, limit_per_category=3):
         for category, url in self.categories.items():
-            self.haberler.append(f"<br>{'-' * 200}<br><u><h4>📰 {category} Haberleri</h4></u>")
+            self.haberler.append(f"<br>{'-' * 120}<br><u><h4>📰 {category} Haberleri</h4></u>")
             news = self.fetch_news_rss(url, limit_per_category)
             self.haberler.extend(news)
 

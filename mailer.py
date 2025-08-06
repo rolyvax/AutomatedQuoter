@@ -34,7 +34,7 @@ class Mailer:
                 f"<br><u>Günün sözü:</u><br>[EN] - <i>{translated_quote}</i><br>"
                 f"[TR] - <i>{quote}</i><br>"
                 f"<br><br><u>Tarihte Bugün:</u><br>{''.join(events)}"
-                f"{''.join(haberler)}<br>{'-' * 200}<br><br><br>")
+                f"{''.join(haberler)}<br>{'-' * 120}<br><br><br>")
 
         # Set up the MIME for HTML
         sender_name = "Günün Fısıltısı"
