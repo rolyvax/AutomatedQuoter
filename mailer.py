@@ -23,7 +23,7 @@ class Mailer:
 
     def send_email(self, translated_quote, quote, haberler, weather, events, song, usd, eur):
         sender_email = "astelaxrolyvax@gmail.com"
-        receiver_emails = ["hakanakay@kabinet.com.tr"]
+        receiver_emails = ["hakanakay@kabinet.com.tr", "volkanakay@kabinet.com.tr"]
         password = os.getenv('GMAIL_PASS')
 
         # Email content (formatted with HTML tags)
