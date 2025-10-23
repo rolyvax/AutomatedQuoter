@@ -28,7 +28,11 @@ class TodaysImportant:
 
     def get_on_this_day_events(self, month, day, top_n=3):
         url = f"https://tr.wikipedia.org/api/rest_v1/feed/onthisday/events/{month}/{day}"
-        response = requests.get(url)
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (compatible; MyPythonApp/1.0; +https://kabinet.com.tr)"
+        }
+        response = requests.get(url, headers=headers)
 
         if response.status_code != 200:
             return [f"Failed to retrieve data: {response.status_code}"]
@@ -49,6 +53,9 @@ class TodaysImportant:
 
         return formatted
 
-
+if __name__ == "__main__":
+    ti = TodaysImportant()
+    for event in ti.events:
+        print(event)
 
 

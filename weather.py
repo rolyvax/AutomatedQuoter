@@ -1,82 +1,162 @@
-import os, requests, time
-from dotenv import load_dotenv
+# weather.py
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+# (tercihen) otomatik driver yönetimi: pip install webdriver-manager
+from selenium.webdriver.chrome.service import Service
+try:
+    from webdriver_manager.chrome import ChromeDriverManager
+    USE_WDM = True
+except Exception:
+    USE_WDM = False
+
 
 class Weather:
-    def __init__(self):
-        load_dotenv()
+    def __init__(self, il="İstanbul", ilce="Pendik", headless=True):
+        self.url = f"https://www.mgm.gov.tr/tahmin/il-ve-ilceler.aspx?il={il}&ilce={ilce}"
+        self.headless = headless
+        self.records = []
+        self._scrape()
 
-        API_KEY = os.getenv("ACCUWEATHER_APIKEY")
+    # --- emoji yardımcıları ---
+    def _normalize(self, s: str) -> str:
+        return s.strip().lower()
 
-        # Step 1: Get location key for Istanbul
-        location_url = "http://dataservice.accuweather.com/locations/v1/cities/search"
-        loc_params = {
-            "apikey": API_KEY,
-            "q": "Istanbul"
+    def _emoji_from_phrase(self, phrase: str) -> str:
+        if not phrase:
+            return "🔆"
+        p = self._normalize(phrase)
+
+        exact = {
+            "güneşli": "☀️",
+            "çoğunlukla güneşli": "🌤️",
+            "parçalı güneşli": "⛅",
+            "aralıklı bulutlar": "🌥️",
+            "çoğunlukla bulutlu": "☁️",
+            "çok bulutlu": "☁️",
+            "bulutlu": "☁️",
+            "kasvetli": "🌫️",
+            "sisli": "🌁",
+            "yağmurlu": "🌧️",
+            "sağanak yağışlı": "🌦️",
+            "gök gürültülü sağanak yağışlı": "⛈️",
+            "karlı": "❄️",
+            "sulu kar": "🌨️",
+            "buzlu": "🧊",
+            "rüzgarlı": "💨",
+            "sıcak": "🔥",
+            "soğuk": "🥶",
         }
+        if p in exact:
+            return exact[p]
 
-        response = requests.get(location_url, params=loc_params)
-        location_data = response.json()
-        istanbul_key = location_data[0]['Key']
+        contains = [
+            ("gök gürültülü", "⛈️"),
+            ("sağanak", "🌦️"),
+            ("yağış", "🌧️"),
+            ("karlı", "❄️"),
+            ("sulu kar", "🌨️"),
+            ("sis", "🌁"),
+            ("çok bulutlu", "☁️"),
+            ("çoğunlukla bulutlu", "☁️"),
+            ("bulut", "☁️"),
+            ("parçalı güneş", "⛅"),
+            ("güneş", "☀️"),
+            ("rüzgar", "💨"),
+            ("sıcak", "🔥"),
+            ("soğuk", "🥶"),
+        ]
+        for key, emo in contains:
+            if key in p:
+                return emo
+        return "🔆"
 
-        # Step 2: Get daily forecast
-        forecast_url = f'http://dataservice.accuweather.com/forecasts/v1/daily/1day/{istanbul_key}'
-        fcast_params = {
-            "apikey": API_KEY,
-            "language": "tr-tr",
-            "metric": True,
-        }
+    # --- ana scrape ---
+    def _scrape(self):
+        options = webdriver.ChromeOptions()
+        if self.headless:
+            options.add_argument("--headless=new")  # Chrome 109+
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--window-size=1920,1080")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--hide-scrollbars")
+        options.add_argument("--disable-notifications")
 
-        response = requests.get(url=forecast_url, params=fcast_params)
-        forecast_data = response.json()
+        if USE_WDM:
+            service = Service(ChromeDriverManager().install())
+        else:
+            # Sistemde yüklü chromedriver varsa bu şekilde bırak.
+            service = Service()
 
-        self.min_temp = forecast_data['DailyForecasts'][0]['Temperature']['Minimum']['Value']
-        self.max_temp = forecast_data['DailyForecasts'][0]['Temperature']['Maximum']['Value']
-        self.day_sky = forecast_data['DailyForecasts'][0]['Day']['IconPhrase']
-        self.night_sky = forecast_data['DailyForecasts'][0]['Night']['IconPhrase']
-        self.day_emoji = self.get_day_emoji(self.day_sky)
-        self.night_emoji = self.get_night_emoji(self.night_sky)
+        driver = webdriver.Chrome(service=service, options=options)
+        driver.get(self.url)
 
-    def get_day_emoji(self, phrase):
-        return {
-            "Güneşli": "☀️",
-            "Çoğunlukla güneşli": "🌤️",
-            "Parçalı güneşli": "⛅",
-            "Aralıklı bulutlar": "🌥️",
-            "Çoğunlukla bulutlu": "☁️",
-            "Bulutlu": "🌫️",
-            "Kasvetli": "🌫️",
-            "Sisli": "🌁",
-            "Yağmurlu": "🌧️",
-            "Sağanak yağışlı": "🌦️",
-            "Gök gürültülü sağanak yağışlı": "⛈️",
-            "Karlı": "❄️",
-            "Sulu kar": "🌨️",
-            "Buzlu": "🧊",
-            "Rüzgarlı": "💨",
-            "Sıcak": "🔥",
-            "Soğuk": "🥶",
-        }.get(phrase, "🔆")
+        wait = WebDriverWait(driver, 25)
+        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "tbody tr")))
 
-    def get_night_emoji(self, phrase):
-        return {
-            "Açık": "🌙",
-            "Çoğunlukla açık": "🌖",
-            "Parçalı bulutlu": "🌤️",
-            "Aralıklı bulutlar": "🌥️",
-            "Puslu ay ışığı": "🌫️",
-            "Çoğunlukla bulutlu": "☁️",
-            "Sağanak yağışlı": "🌧️",
-            "Gök gürültülü sağanak yağışlı": "⛈️",
-            "Karlı": "❄️",
-            "Sulu kar": "🌨️",
-            "Rüzgarlı": "💨",
-            "Sisli": "🌁",
-        }.get(phrase, "🌌")  # default to night sky
+        rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")[1:]  # başlığı atla
 
-# Test
-if __name__ == "__main__":
-    weather = Weather()
-    print(f"Gündüz: {weather.day_sky} {weather.day_emoji}")
-    print(f"Gece: {weather.night_sky} {weather.night_emoji}")
-    print(f"Minimum: {weather.min_temp}°C")
-    print(f"Maksimum: {weather.max_temp}°C")
+        def parse_hour(hhmm: str) -> int:
+            return int(hhmm.split(".")[0])
+
+        # hedef gün: ilk veri satırındaki gün adı
+        if rows:
+            first_spans = rows[0].find_elements(By.CSS_SELECTOR, "th span.ng-binding")
+            target_day = first_spans[0].text.strip() if len(first_spans) >= 1 else None
+        else:
+            target_day = None
+
+        out = []
+        for row in rows:
+            spans = row.find_elements(By.CSS_SELECTOR, "th span.ng-binding")
+            if len(spans) < 3:
+                continue
+
+            gun_adi = spans[0].text.strip()
+            onceki_saat = spans[1].text.strip()
+            sonraki_saat = spans[2].text.strip()
+
+            # sadece ilk gün
+            if target_day and gun_adi != target_day:
+                break
+
+            # 09–24 aralığı
+            start_h = parse_hour(onceki_saat)
+            if start_h < 9 or start_h > 23:
+                continue
+
+            # hadise
+            try:
+                hadise_title = row.find_element(
+                    By.CSS_SELECTOR, "td:nth-of-type(1) img[title]"
+                ).get_attribute("title").strip()
+            except:
+                hadise_title = None
+
+            # sıcaklıklar (xT: [sicaklik, hissedilen])
+            xT_spans = row.find_elements(By.CSS_SELECTOR, "td.xT span")
+            sicaklik = xT_spans[0].text.strip() if len(xT_spans) > 0 else None
+            hissedilen = xT_spans[1].text.strip() if len(xT_spans) > 1 else None
+
+            out.append({
+                "gun": gun_adi,
+                "onceki_saat": onceki_saat,
+                "sonraki_saat": sonraki_saat,
+                "sicaklik": sicaklik,
+                "hissedilen": hissedilen,
+                "hadise": hadise_title,
+                "emoji": self._emoji_from_phrase(hadise_title),
+            })
+
+        try:
+            driver.quit()
+        except:
+            pass
+
+        self.records = out
+
+    def get_forecast(self):
+        return self.records
